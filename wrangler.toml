@@ -10,3 +10,7 @@ crons = [ ]
 [[kv_namespaces]]
 id = "d3d405e18ed44cf38b06606277f6b2ca"
 binding = "SEARCH_RESULTS_CACHE"
+
+[vars]
+# secrets:
+# - TINYBIRD_API_KEY
