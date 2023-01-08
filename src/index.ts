@@ -56,7 +56,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
 async function searchGames(requestParams: URLSearchParams, searchParams: string, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_search.json';
+  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_game_search.json';
   const url = `${endpoint}?token=${TINYBIRD_API_KEY}${searchParams}`;
 
   if (!requestParams.has('refresh')) {
