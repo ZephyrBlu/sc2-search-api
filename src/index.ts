@@ -100,7 +100,7 @@ async function searchPlayers(params: URLSearchParams, env: Env) {
   const apiResponse = await fetch(url);
   const searchResponse: SearchResponse = await apiResponse.json();
   const searchResults = searchResponse.data;
-  const serializedSearchResults = JSON.stringify(searchResponse);
+  const serializedSearchResults = JSON.stringify(searchResults);
 
   if (apiResponse.ok) {
     await SEARCH_RESULTS_CACHE.put(searchParams, serializedSearchResults, {
