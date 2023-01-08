@@ -38,7 +38,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       return await searchPlayers(params, env);
 
     default:
-      return new Response(`invalid path: ${url.pathname}`, {status: 400});
+      return new Response(`invalid path: ${url.pathname}`, {headers: HEADERS, status: 400});
   }
 }
 
@@ -76,7 +76,7 @@ async function search(params: URLSearchParams, env: Env) {
     });
   }
 
-  return new Response(serializedSearchResults, {headers: HEADERS});
+  return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
 async function searchPlayers(params: URLSearchParams, env: Env) {
@@ -107,6 +107,6 @@ async function searchPlayers(params: URLSearchParams, env: Env) {
     });
   }
 
-  return new Response(serializedSearchResults, {headers: HEADERS});
+  return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 
 }
