@@ -26,16 +26,19 @@ export default {
   }
 }
 
-async function handleRequest(request: Request, env: Env) {
+async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const params = new URLSearchParams(url.search);
 
   switch(url.pathname) {
     case '/search':
-      return search(params, env);
+      return await search(params, env);
 
     case '/player':
-      return searchPlayers(params, env);
+      return await searchPlayers(params, env);
+
+    default:
+      return new Response(`invalid path: ${url.pathname}`, {status: 400});
   }
 }
 
