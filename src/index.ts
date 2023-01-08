@@ -34,7 +34,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     return new Response('missing parameter: q',  {headers: HEADERS, status: 400});
   }
 
-  const searchParams = `&input=${params.get('q')}`;
+  const searchParams = `input=${params.get('q')}`;
 
   switch(url.pathname) {
     case '/games':
@@ -57,7 +57,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 async function searchGames(requestParams: URLSearchParams, searchParams: string, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_game_search.json';
-  const url = `${endpoint}?token=${TINYBIRD_API_KEY}${searchParams}`;
+  const url = `${endpoint}?${searchParams}`;
+  const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
   if (!requestParams.has('refresh')) {
     const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
@@ -67,7 +68,7 @@ async function searchGames(requestParams: URLSearchParams, searchParams: string,
     }
   }
 
-  const apiResponse = await fetch(url);
+  const apiResponse = await fetch(authorizedUrl);
   const searchResponse: SearchResponse = await apiResponse.json();
 
   const searchResults = searchResponse.data.map((record) => ({
@@ -78,7 +79,7 @@ async function searchGames(requestParams: URLSearchParams, searchParams: string,
   const serializedSearchResults = JSON.stringify(searchResults);
 
   if (apiResponse.ok) {
-    await SEARCH_RESULTS_CACHE.put(searchParams, serializedSearchResults, {
+    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
       expirationTtl: CACHE_TTL,
     });
   }
@@ -89,7 +90,8 @@ async function searchGames(requestParams: URLSearchParams, searchParams: string,
 async function searchPlayers(requestParams: URLSearchParams, searchParams: string, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_player_search.json';
-  const url = `${endpoint}?token=${TINYBIRD_API_KEY}${searchParams}`;
+  const url = `${endpoint}?${searchParams}`;
+  const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
   if (!requestParams.has('refresh')) {
     const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
@@ -99,13 +101,13 @@ async function searchPlayers(requestParams: URLSearchParams, searchParams: strin
     }
   }
 
-  const apiResponse = await fetch(url);
+  const apiResponse = await fetch(authorizedUrl);
   const searchResponse: SearchResponse = await apiResponse.json();
   const searchResults = searchResponse.data;
   const serializedSearchResults = JSON.stringify(searchResults);
 
   if (apiResponse.ok) {
-    await SEARCH_RESULTS_CACHE.put(searchParams, serializedSearchResults, {
+    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
       expirationTtl: CACHE_TTL,
     });
   }
@@ -116,7 +118,8 @@ async function searchPlayers(requestParams: URLSearchParams, searchParams: strin
 async function searchMaps(requestParams: URLSearchParams, searchParams: string, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_map_search.json';
-  const url = `${endpoint}?token=${TINYBIRD_API_KEY}${searchParams}`;
+  const url = `${endpoint}?${searchParams}`;
+  const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
   if (!requestParams.has('refresh')) {
     const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
@@ -126,13 +129,13 @@ async function searchMaps(requestParams: URLSearchParams, searchParams: string, 
     }
   }
 
-  const apiResponse = await fetch(url);
+  const apiResponse = await fetch(authorizedUrl);
   const searchResponse: SearchResponse = await apiResponse.json();
   const searchResults = searchResponse.data;
   const serializedSearchResults = JSON.stringify(searchResults);
 
   if (apiResponse.ok) {
-    await SEARCH_RESULTS_CACHE.put(searchParams, serializedSearchResults, {
+    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
       expirationTtl: CACHE_TTL,
     });
   }
@@ -143,7 +146,8 @@ async function searchMaps(requestParams: URLSearchParams, searchParams: string, 
 async function searchEvents(requestParams: URLSearchParams, searchParams: string, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_event_search.json';
-  const url = `${endpoint}?token=${TINYBIRD_API_KEY}${searchParams}`;
+  const url = `${endpoint}?${searchParams}`;
+  const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
   if (!requestParams.has('refresh')) {
     const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
@@ -153,13 +157,13 @@ async function searchEvents(requestParams: URLSearchParams, searchParams: string
     }
   }
 
-  const apiResponse = await fetch(url);
+  const apiResponse = await fetch(authorizedUrl);
   const searchResponse: SearchResponse = await apiResponse.json();
   const searchResults = searchResponse.data;
   const serializedSearchResults = JSON.stringify(searchResults);
 
   if (apiResponse.ok) {
-    await SEARCH_RESULTS_CACHE.put(searchParams, serializedSearchResults, {
+    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
       expirationTtl: CACHE_TTL,
     });
   }
