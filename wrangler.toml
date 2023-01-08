@@ -1,0 +1,12 @@
+name = "tinybird-sc2-search"
+main = "src/index.ts"
+compatibility_date = "2023-01-08"
+usage_model = "unbound"
+env = { }
+
+[triggers]
+crons = [ ]
+
+[[kv_namespaces]]
+id = "d3d405e18ed44cf38b06606277f6b2ca"
+binding = "SEARCH_RESULTS_CACHE"
