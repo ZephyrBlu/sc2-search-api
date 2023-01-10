@@ -206,24 +206,25 @@ async function fetchRecent(requestParams: URLSearchParams, env: Env) {
 
     const response = await fetch(authorizedUrl);
     const results: TinybirdResponse = await response.json();
-    let serializedResults = JSON.stringify(results.data);
-
+    
+    let resultData = results.data;
     if (dataType === 'replays') {
-      const replayResults = results.data.map((record) => ({
+      resultData = results.data.map((record) => ({
         ...record,
         builds: JSON.parse(record.builds),
         players: JSON.parse(record.players),
       }));
-      serializedResults = JSON.stringify(replayResults);
     }
-
+    
+    const serializedResults = JSON.stringify(results.data);
+    
     if (response.ok) {
       await SEARCH_RESULTS_CACHE.put(url, serializedResults, {
         expirationTtl: CACHE_TTL,
       });
     }
 
-    return {[dataType]: results.data};
+    return {[dataType]: resultData};
   }));
 
   const recentResults = responses.reduce((allResults, currentResults) => ({
