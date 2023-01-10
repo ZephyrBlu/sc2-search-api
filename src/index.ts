@@ -3,9 +3,9 @@ type Env = {
   SEARCH_RESULTS_CACHE: KVNamespace,
 };
 
-type SearchResponse = {
-  meta: any[],
-  data: any[],
+type TinybirdResponse = {
+  meta: object[],
+  data: object[],
   rows: number,
   statistics: {
     elapsed: number,
@@ -30,7 +30,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const params = new URLSearchParams(url.search);
 
-  if (!params.has('q')) {
+  if (url.pathname !== '/recent' && !params.has('q')) {
     return new Response('missing parameter: q',  {headers: HEADERS, status: 400});
   }
 
@@ -48,6 +48,9 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
     case '/events':
       return await searchEvents(params, searchParams, env);
+
+    case '/recent':
+      return await fetchRecent(params, env);
 
     default:
       return new Response(`invalid path: ${url.pathname}`, {headers: HEADERS, status: 400});
@@ -69,7 +72,7 @@ async function searchGames(requestParams: URLSearchParams, searchParams: string,
   }
 
   const apiResponse = await fetch(authorizedUrl);
-  const searchResponse: SearchResponse = await apiResponse.json();
+  const searchResponse: TinybirdResponse = await apiResponse.json();
 
   const searchResults = searchResponse.data.map((record) => ({
     ...record,
@@ -102,7 +105,7 @@ async function searchPlayers(requestParams: URLSearchParams, searchParams: strin
   }
 
   const apiResponse = await fetch(authorizedUrl);
-  const searchResponse: SearchResponse = await apiResponse.json();
+  const searchResponse: TinybirdResponse = await apiResponse.json();
   const searchResults = searchResponse.data;
   const serializedSearchResults = JSON.stringify(searchResults);
 
@@ -130,7 +133,7 @@ async function searchMaps(requestParams: URLSearchParams, searchParams: string, 
   }
 
   const apiResponse = await fetch(authorizedUrl);
-  const searchResponse: SearchResponse = await apiResponse.json();
+  const searchResponse: TinybirdResponse = await apiResponse.json();
   const searchResults = searchResponse.data;
   const serializedSearchResults = JSON.stringify(searchResults);
 
@@ -158,7 +161,7 @@ async function searchEvents(requestParams: URLSearchParams, searchParams: string
   }
 
   const apiResponse = await fetch(authorizedUrl);
-  const searchResponse: SearchResponse = await apiResponse.json();
+  const searchResponse: TinybirdResponse = await apiResponse.json();
   const searchResults = searchResponse.data;
   const serializedSearchResults = JSON.stringify(searchResults);
 
@@ -169,4 +172,52 @@ async function searchEvents(requestParams: URLSearchParams, searchParams: string
   }
 
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
+}
+
+async function fetchRecent(requestParams: URLSearchParams, env: Env) {
+  const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
+  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/';
+  const pipes = [
+    'sc2_recent_games',
+    'sc2_recent_players',
+    'sc2_recent_maps',
+    'sc2_recent_events',
+  ];
+
+  const responses: any[] = await Promise.all(pipes.map(async (pipe) => {
+    const url = `${endpoint}${pipe}.json`;
+    const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
+  
+    if (!requestParams.has('refresh')) {
+      const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {
+        type: 'json',
+        cacheTtl: CACHE_TTL,
+      });
+  
+      if (cachedResult) {
+        return cachedResult;
+      }
+    }
+
+    const response = await fetch(authorizedUrl);
+    const results: TinybirdResponse = await response.json();
+    const serializedResults = JSON.stringify(results.data);
+
+    if (response.ok) {
+      await SEARCH_RESULTS_CACHE.put(url, serializedResults, {
+        expirationTtl: CACHE_TTL,
+      });
+    }
+
+    const dataType = pipe.split('_').slice(-1)[0];
+    return {[dataType]: results.data};
+  }));
+
+  const recentResults = responses.reduce((allResults, currentResults) => ({
+    ...allResults,
+    ...currentResults,
+  }), {});
+  const serializedRecentResults = JSON.stringify(recentResults);
+
+  return new Response(serializedRecentResults, {headers: HEADERS});
 }
