@@ -187,7 +187,11 @@ async function fetchRecent(requestParams: URLSearchParams, env: Env) {
   const responses: any[] = await Promise.all(pipes.map(async (pipe) => {
     const url = `${endpoint}${pipe}.json`;
     const authorizedUrl = `${url}?token=${TINYBIRD_API_KEY}`;
-    const dataType = pipe.split('_').slice(-1)[0];
+
+    let dataType = pipe.split('_').slice(-1)[0];
+    if (dataType === 'games') {
+      dataType = 'replays';
+    }
   
     if (!requestParams.has('refresh')) {
       const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {
