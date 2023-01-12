@@ -57,6 +57,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   }
 }
 
+function compare(a: string, b: string) {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
 async function searchGames(requestParams: URLSearchParams, searchParams: string, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   
@@ -87,7 +91,28 @@ async function searchGames(requestParams: URLSearchParams, searchParams: string,
     builds: JSON.parse(record.builds),
     players: JSON.parse(record.players),
   }));
-  const serializedSearchResults = JSON.stringify(searchResults);
+
+  const exactMatches: any[] = [];
+  const otherMatches: any[] = [];
+  const terms = searchParams.split('+');
+  searchResults.forEach((replay) => {
+    let exact = false;
+    replay.players.forEach((player) => {
+      // any exact name match should rank replay higher
+      const exactMatch = terms.some((term: string) => compare(player.name, term));
+      if (!exact && exactMatch) {
+        exactMatches.push(replay);
+        exact = true;
+      }
+    });
+
+    if (!exact) {
+      otherMatches.push(replay);
+    }
+  });
+
+  const orderedSearchResults = [...exactMatches, ...otherMatches];
+  const serializedSearchResults = JSON.stringify(orderedSearchResults.slice(0, 20));
 
   if (apiResponse.ok) {
     await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
