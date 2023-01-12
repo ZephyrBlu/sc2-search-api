@@ -52,9 +52,6 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     case '/recent':
       return await fetchRecent(params, env);
 
-    case '/recent/games':
-      return await fetchRecentGames(params, env);
-
     default:
       return new Response(`invalid path: ${url.pathname}`, {headers: HEADERS, status: 400});
   }
@@ -62,7 +59,14 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
 async function searchGames(requestParams: URLSearchParams, searchParams: string, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_game_search.json';
+  
+  let endpoint = 'https://api.us-east.tinybird.co/v0/pipes/';
+  if (requestParams.has('fuzzy')) {
+    endpoint += 'sc2_fuzzy_game_search';
+  } else {
+    endpoint += 'sc2_game_search';
+  }
+
   const url = `${endpoint}?${searchParams}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
@@ -237,36 +241,4 @@ async function fetchRecent(requestParams: URLSearchParams, env: Env) {
   const serializedRecentResults = JSON.stringify(recentResults);
 
   return new Response(serializedRecentResults, {headers: HEADERS});
-}
-
-async function fetchRecentGames(requestParams: URLSearchParams, env: Env) {
-  const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  const url = 'https://api.us-east.tinybird.co/v0/pipes/sc2_recent_games.json';
-  const authorizedUrl = `${url}?token=${TINYBIRD_API_KEY}`;
-
-  if (!requestParams.has('refresh')) {
-    const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
-
-    if (cachedResult) {
-      return new Response(cachedResult, {headers: HEADERS});
-    }
-  }
-
-  const response = await fetch(authorizedUrl);
-  const results: TinybirdResponse = await response.json();
-
-  const resultData = searchResponse.data.map((record) => ({
-    ...record,
-    builds: JSON.parse(record.builds),
-    players: JSON.parse(record.players),
-  }));
-  const serializedSearchResults = JSON.stringify(resultData);
-
-  if (response.ok) {
-    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
-      expirationTtl: CACHE_TTL,
-    });
-  }
-
-  return new Response(serializedSearchResults, {headers: HEADERS, status: response.status});
 }
