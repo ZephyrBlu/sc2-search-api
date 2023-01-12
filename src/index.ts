@@ -66,6 +66,7 @@ async function searchGames(requestParams: URLSearchParams, searchParams: string,
   } else {
     endpoint += 'sc2_game_search';
   }
+  endpoint += '.json';
 
   const url = `${endpoint}?${searchParams}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
