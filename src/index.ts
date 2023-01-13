@@ -99,26 +99,30 @@ async function searchGames(requestParams: URLSearchParams, searchParams: URLSear
     players: JSON.parse(record.players),
   }));
 
-  const exactMatches: any[] = [];
-  const otherMatches: any[] = [];
-  const terms = searchParams.get('input')!.split('+');
-  searchResults.forEach((replay) => {
-    let exact = false;
-    replay.players.forEach((player) => {
-      // any exact name match should rank replay higher
-      const exactMatch = terms.some((term: string) => compare(player.name, term));
-      if (!exact && exactMatch) {
-        exactMatches.push(replay);
-        exact = true;
+  let orderedSearchResults = searchResults;
+  if (searchParams.get('input')) {
+    const exactMatches: any[] = [];
+    const otherMatches: any[] = [];
+    const terms = searchParams.get('input')!.split('+');
+    searchResults.forEach((replay) => {
+      let exact = false;
+      replay.players.forEach((player) => {
+        // any exact name match should rank replay higher
+        const exactMatch = terms.some((term: string) => compare(player.name, term));
+        if (!exact && exactMatch) {
+          exactMatches.push(replay);
+          exact = true;
+        }
+      });
+
+      if (!exact) {
+        otherMatches.push(replay);
       }
     });
 
-    if (!exact) {
-      otherMatches.push(replay);
-    }
-  });
+    orderedSearchResults = [...exactMatches, ...otherMatches];
+  }
 
-  const orderedSearchResults = [...exactMatches, ...otherMatches];
   const serializedSearchResults = JSON.stringify(orderedSearchResults.slice(0, 20));
 
   if (apiResponse.ok) {
