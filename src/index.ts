@@ -34,7 +34,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     return new Response('missing parameter: q',  {headers: HEADERS, status: 400});
   }
 
-  const searchParams = `input=${params.get('q')}`;
+  let rawSearchParams = `input=${params.get('q')}`;
+  params.delete('q');
+  rawSearchParams += params;
+  const searchParams = new URLSearchParams(rawSearchParams);
 
   switch(url.pathname) {
     case '/games':
@@ -61,18 +64,19 @@ function compare(a: string, b: string) {
   return a.toLowerCase() === b.toLowerCase();
 }
 
-async function searchGames(requestParams: URLSearchParams, searchParams: string, env: Env) {
+async function searchGames(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   
   let endpoint = 'https://api.us-east.tinybird.co/v0/pipes/';
   if (requestParams.has('fuzzy')) {
     endpoint += 'sc2_fuzzy_game_search';
+    searchParams.delete('fuzzy');
   } else {
     endpoint += 'sc2_game_search';
   }
   endpoint += '.json';
 
-  const url = `${endpoint}?${searchParams}`;
+  const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
   if (!requestParams.has('refresh')) {
@@ -94,7 +98,7 @@ async function searchGames(requestParams: URLSearchParams, searchParams: string,
 
   const exactMatches: any[] = [];
   const otherMatches: any[] = [];
-  const terms = searchParams.split('+');
+  const terms = searchParams.get('input')!.split('+');
   searchResults.forEach((replay) => {
     let exact = false;
     replay.players.forEach((player) => {
@@ -123,10 +127,10 @@ async function searchGames(requestParams: URLSearchParams, searchParams: string,
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
-async function searchPlayers(requestParams: URLSearchParams, searchParams: string, env: Env) {
+async function searchPlayers(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_player_search.json';
-  const url = `${endpoint}?${searchParams}`;
+  const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
   if (!requestParams.has('refresh')) {
@@ -151,10 +155,10 @@ async function searchPlayers(requestParams: URLSearchParams, searchParams: strin
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
-async function searchMaps(requestParams: URLSearchParams, searchParams: string, env: Env) {
+async function searchMaps(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_map_search.json';
-  const url = `${endpoint}?${searchParams}`;
+  const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
   if (!requestParams.has('refresh')) {
@@ -179,10 +183,10 @@ async function searchMaps(requestParams: URLSearchParams, searchParams: string, 
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
-async function searchEvents(requestParams: URLSearchParams, searchParams: string, env: Env) {
+async function searchEvents(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_event_search.json';
-  const url = `${endpoint}?${searchParams}`;
+  const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
   if (!requestParams.has('refresh')) {
