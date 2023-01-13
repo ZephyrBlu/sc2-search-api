@@ -32,7 +32,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
   if (
     (url.pathname !== '/recent' && !params.has('q')) ||
-    (url.pathname === '/games' && !params.has('fuzzy'))
+    (url.pathname === '/games' && params.has('fuzzy') && !params.has('q'))
   ) {
     return new Response('missing parameter: q',  {headers: HEADERS, status: 400});
   }
