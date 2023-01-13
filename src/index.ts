@@ -31,8 +31,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   const params = new URLSearchParams(url.search);
 
   if (
-    (url.pathname !== '/recent' && !params.has('q')) ||
-    (url.pathname === '/games' && params.has('fuzzy') && !params.has('q'))
+    (url.pathname !== '/recent' && !params.has('q')) &&
+    !(url.pathname === '/games' && !params.has('fuzzy'))
   ) {
     return new Response('missing parameter: q',  {headers: HEADERS, status: 400});
   }
