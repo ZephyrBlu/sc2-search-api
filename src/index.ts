@@ -30,7 +30,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const params = new URLSearchParams(url.search);
 
-  if (url.pathname !== '/recent' && !params.has('q')) {
+  if (
+    (url.pathname !== '/recent' && !params.has('q')) ||
+    (url.pathname === '/games' && !params.has('fuzzy'))
+  ) {
     return new Response('missing parameter: q',  {headers: HEADERS, status: 400});
   }
 
