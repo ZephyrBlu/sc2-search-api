@@ -38,9 +38,11 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   // }
 
   const searchParams = new URLSearchParams(params.toString());
-  if (!(url.pathname === '/games' && !params.has('fuzzy'))) {
+  searchParams.delete('refresh');
+  searchParams.delete('q');
+
+  if (params.get('q')) {
     searchParams.set('input', params.get('q')!);
-    searchParams.delete('q');
   }
 
   switch(url.pathname) {
