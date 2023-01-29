@@ -1,3 +1,5 @@
+import {KVNamespace} from '@cloudflare/workers-types';
+
 type Env = {
   TINYBIRD_API_KEY: string,
   SEARCH_RESULTS_CACHE: KVNamespace,
@@ -50,6 +52,9 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
     case '/events':
       return await searchEvents(params, searchParams, env);
+
+    case '/builds':
+      return await searchPlayerBuilds(params, searchParams, env);
 
     case '/recent':
       return await fetchRecent(params, env);
@@ -188,6 +193,34 @@ async function searchMaps(requestParams: URLSearchParams, searchParams: URLSearc
 async function searchEvents(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_event_search.json';
+  const url = `${endpoint}?${searchParams.toString()}`;
+  const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
+
+  if (!requestParams.has('refresh')) {
+    const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
+
+    if (cachedResult) {
+      return new Response(cachedResult, {headers: HEADERS});
+    }
+  }
+
+  const apiResponse = await fetch(authorizedUrl);
+  const searchResponse: TinybirdResponse = await apiResponse.json();
+  const searchResults = searchResponse.data;
+  const serializedSearchResults = JSON.stringify(searchResults);
+
+  if (apiResponse.ok) {
+    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
+      expirationTtl: CACHE_TTL,
+    });
+  }
+
+  return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
+}
+
+async function searchPlayerBuilds(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
+  const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
+  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_player_builds.json';
   const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
