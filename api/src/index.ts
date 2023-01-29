@@ -1,3 +1,6 @@
+import {KVNamespace} from '@cloudflare/workers-types';
+import {greet} from '../../build-trees/pkg/build_trees.js';
+
 type Env = {
   TINYBIRD_API_KEY: string,
   SEARCH_RESULTS_CACHE: KVNamespace,
@@ -51,6 +54,9 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     case '/events':
       return await searchEvents(params, searchParams, env);
 
+    case '/trees':
+      return await generateBuildTrees(params, searchParams, env);
+
     case '/recent':
       return await fetchRecent(params, env);
 
@@ -65,7 +71,7 @@ function compare(a: string, b: string) {
 
 async function searchGames(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  
+
   let endpoint = 'https://api.us-east.tinybird.co/v0/pipes/';
   if (requestParams.has('fuzzy')) {
     endpoint += 'sc2_fuzzy_game_search';
@@ -213,6 +219,37 @@ async function searchEvents(requestParams: URLSearchParams, searchParams: URLSea
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
+async function generateBuildTrees(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
+  const value = greet();
+  return new Response(value);
+
+  // const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
+  // const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_player_builds.json';
+  // const url = `${endpoint}?${searchParams.toString()}`;
+  // const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
+
+  // if (!requestParams.has('refresh')) {
+  //   const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
+
+  //   if (cachedResult) {
+  //     return new Response(cachedResult, {headers: HEADERS});
+  //   }
+  // }
+
+  // const apiResponse = await fetch(authorizedUrl);
+  // const searchResponse: TinybirdResponse = await apiResponse.json();
+  // const searchResults = searchResponse.data;
+  // const serializedSearchResults = JSON.stringify(searchResults);
+
+  // if (apiResponse.ok) {
+  //   await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
+  //     expirationTtl: CACHE_TTL,
+  //   });
+  // }
+
+  // return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
+}
+
 async function fetchRecent(requestParams: URLSearchParams, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/';
@@ -231,13 +268,13 @@ async function fetchRecent(requestParams: URLSearchParams, env: Env) {
     if (dataType === 'games') {
       dataType = 'replays';
     }
-  
+
     if (!requestParams.has('refresh')) {
       const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {
         type: 'json',
         cacheTtl: CACHE_TTL,
       });
-  
+
       if (cachedResult) {
         return {[dataType]: cachedResult};
       }
@@ -245,7 +282,7 @@ async function fetchRecent(requestParams: URLSearchParams, env: Env) {
 
     const response = await fetch(authorizedUrl);
     const results: TinybirdResponse = await response.json();
-    
+
     let resultData = results.data;
     if (dataType === 'replays') {
       resultData = results.data.map((record) => ({
@@ -256,7 +293,7 @@ async function fetchRecent(requestParams: URLSearchParams, env: Env) {
     }
 
     const serializedResults = JSON.stringify(results.data);
-    
+
     if (response.ok) {
       await SEARCH_RESULTS_CACHE.put(url, serializedResults, {
         expirationTtl: CACHE_TTL,

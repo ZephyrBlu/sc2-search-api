@@ -1,5 +1,5 @@
 name = "tinybird-sc2-search"
-main = "src/index.ts"
+main = "api/src/index.ts"
 compatibility_date = "2023-01-08"
 usage_model = "unbound"
 env = { }
