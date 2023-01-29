@@ -1,9 +1,2 @@
 .DS_Store
-/api/node_modules/
-
-/build-trees/target
-/build-trees/**/*.rs.bk
-/build-trees/Cargo.lock
-/build-trees/bin/
-/build-trees/pkg/
-/build-trees/wasm-pack.log
+node_modules/
