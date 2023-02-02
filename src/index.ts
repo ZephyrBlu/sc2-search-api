@@ -56,8 +56,17 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     case '/builds':
       return await searchPlayerBuilds(params, searchParams, env);
 
-    case '/timelines':
-      return await searchTimelines(params, searchParams, env);
+    case '/timeline/game-length':
+      return await searchTimelines('game-length', params, searchParams, env);
+
+    case '/timeline/army-value':
+      return await searchTimelines('army-value', params, searchParams, env);
+
+    case '/timeline/collection-rate':
+      return await searchTimelines('collection-rate', params, searchParams, env);
+
+    case '/timeline/workers-active':
+      return await searchTimelines('workers-active', params, searchParams, env);
 
     case '/recent':
       return await fetchRecent(params, env);
@@ -249,9 +258,38 @@ async function searchPlayerBuilds(requestParams: URLSearchParams, searchParams: 
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
-async function searchTimelines(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
+type TimelineSearchType = 'game-length' | 'collection-rate' | 'army-value' | 'workers-active';
+
+async function searchTimelines(
+  searchType: TimelineSearchType,
+  requestParams: URLSearchParams,
+  searchParams: URLSearchParams,
+  env: Env,
+) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_timeline_event_search.json';
+  let endpoint = 'https://api.us-east.tinybird.co/v0/pipes/';
+  
+  switch(searchType) {
+    case 'game-length':
+      endpoint += 'sc2_timeline_game_length_search.json';
+      break;
+
+    case 'collection-rate':
+    endpoint += 'sc2_timeline_collection_rate_search.json';
+    break;
+
+    case 'army-value':
+      endpoint += 'sc2_timeline_army_value_search.json';
+      break;
+
+    case 'workers-active':
+      endpoint += 'sc2_timeline_workers_active_search.json';
+      break;
+
+    default:
+      return new Response(`search type ${searchType} not found`, {status: 400, headers: HEADERS});
+  }
+  
   const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
