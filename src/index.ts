@@ -244,7 +244,7 @@ async function searchTimelines(
   requestParams: URLSearchParams,
   searchParams: URLSearchParams,
   env: Env,
-  quantiles?: boolean,
+  quantiles: boolean = false,
 ) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   let endpoint = `https://api.us-east.tinybird.co/v0/pipes/${pipe}`;
