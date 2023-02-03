@@ -5,7 +5,23 @@ type Env = {
   SEARCH_RESULTS_CACHE: KVNamespace,
 };
 
-type TinybirdResponse = {
+type TinybirdGamePipe =
+  'sc2_game_search' |
+  'sc2_fuzzy_game_search' |
+  'sc2_player_search' |
+  'sc2_map_search' |
+  'sc2_event_search' |
+  'sc2_player_builds';
+
+type TinybirdTimelinePipe =
+  'sc2_timeline_game_length' |
+  'sc2_timeline_collection_rate' |
+  'sc2_timeline_army_value' |
+  'sc2_timeline_workers_active';
+
+type TinybirdPipe = TinybirdGamePipe | TinybirdTimelinePipe;
+
+interface TinybirdResponse {
   meta: object[],
   data: object[],
   rows: number,
@@ -42,31 +58,43 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
   switch(url.pathname) {
     case '/games':
-      return await searchGames(params, searchParams, env);
+      return await searchAllGames(params, searchParams, env);
 
     case '/players':
-      return await searchPlayers(params, searchParams, env);
+      return await searchGames('sc2_player_search', params, searchParams, env);
 
     case '/maps':
-      return await searchMaps(params, searchParams, env);
+      return await searchGames('sc2_map_search', params, searchParams, env);
 
     case '/events':
-      return await searchEvents(params, searchParams, env);
+      return await searchGames('sc2_event_search', params, searchParams, env);
 
     case '/builds':
       return await searchPlayerBuilds(params, searchParams, env);
 
     case '/timeline/game-length':
-      return await searchTimelines('game-length', params, searchParams, env);
+      return await searchTimelines('sc2_timeline_game_length', params, searchParams, env);
 
     case '/timeline/army-value':
-      return await searchTimelines('army-value', params, searchParams, env);
+      return await searchTimelines('sc2_timeline_army_value', params, searchParams, env);
 
     case '/timeline/collection-rate':
-      return await searchTimelines('collection-rate', params, searchParams, env);
+      return await searchTimelines('sc2_timeline_collection_rate', params, searchParams, env);
 
     case '/timeline/workers-active':
-      return await searchTimelines('workers-active', params, searchParams, env);
+      return await searchTimelines('sc2_timeline_workers_active', params, searchParams, env);
+
+    case '/timeline/quantiles/game-length':
+      return await searchTimelines('sc2_timeline_game_length', params, searchParams, env, true);
+
+    case '/timeline/quantiles/army-value':
+      return await searchTimelines('sc2_timeline_army_value', params, searchParams, env, true);
+
+    case '/timeline/quantiles/collection-rate':
+      return await searchTimelines('sc2_timeline_collection_rate', params, searchParams, env, true);
+
+    case '/timeline/quantiles/workers-active':
+      return await searchTimelines('sc2_timeline_workers_active', params, searchParams, env, true);
 
     case '/recent':
       return await fetchRecent(params, env);
@@ -80,7 +108,7 @@ function compare(a: string, b: string) {
   return a.toLowerCase() === b.toLowerCase();
 }
 
-async function searchGames(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
+async function searchAllGames(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   
   let endpoint = 'https://api.us-east.tinybird.co/v0/pipes/';
@@ -146,9 +174,14 @@ async function searchGames(requestParams: URLSearchParams, searchParams: URLSear
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
-async function searchPlayers(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
+async function searchGames(
+  pipe: TinybirdGamePipe,
+  requestParams: URLSearchParams,
+  searchParams: URLSearchParams,
+  env: Env,
+) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_player_search.json';
+  const endpoint = `https://api.us-east.tinybird.co/v0/pipes/${pipe}.json`;
   const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
@@ -174,63 +207,11 @@ async function searchPlayers(requestParams: URLSearchParams, searchParams: URLSe
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
-async function searchMaps(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
-  const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_map_search.json';
-  const url = `${endpoint}?${searchParams.toString()}`;
-  const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
-
-  if (!requestParams.has('refresh')) {
-    const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
-
-    if (cachedResult) {
-      return new Response(cachedResult, {headers: HEADERS});
-    }
-  }
-
-  const apiResponse = await fetch(authorizedUrl);
-  const searchResponse: TinybirdResponse = await apiResponse.json();
-  const searchResults = searchResponse.data;
-  const serializedSearchResults = JSON.stringify(searchResults);
-
-  if (apiResponse.ok) {
-    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
-      expirationTtl: CACHE_TTL,
-    });
-  }
-
-  return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
-}
-
-async function searchEvents(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
-  const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_event_search.json';
-  const url = `${endpoint}?${searchParams.toString()}`;
-  const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
-
-  if (!requestParams.has('refresh')) {
-    const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
-
-    if (cachedResult) {
-      return new Response(cachedResult, {headers: HEADERS});
-    }
-  }
-
-  const apiResponse = await fetch(authorizedUrl);
-  const searchResponse: TinybirdResponse = await apiResponse.json();
-  const searchResults = searchResponse.data;
-  const serializedSearchResults = JSON.stringify(searchResults);
-
-  if (apiResponse.ok) {
-    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
-      expirationTtl: CACHE_TTL,
-    });
-  }
-
-  return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
-}
-
-async function searchPlayerBuilds(requestParams: URLSearchParams, searchParams: URLSearchParams, env: Env) {
+async function searchPlayerBuilds(
+  requestParams: URLSearchParams,
+  searchParams: URLSearchParams,
+  env: Env,
+) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
   const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_player_builds.json';
   const url = `${endpoint}?${searchParams.toString()}`;
@@ -258,38 +239,21 @@ async function searchPlayerBuilds(requestParams: URLSearchParams, searchParams: 
   return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
 }
 
-type TimelineSearchType = 'game-length' | 'collection-rate' | 'army-value' | 'workers-active';
-
 async function searchTimelines(
-  searchType: TimelineSearchType,
+  pipe: TinybirdTimelinePipe,
   requestParams: URLSearchParams,
   searchParams: URLSearchParams,
   env: Env,
+  quantiles?: boolean,
 ) {
   const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
-  let endpoint = 'https://api.us-east.tinybird.co/v0/pipes/';
-  
-  switch(searchType) {
-    case 'game-length':
-      endpoint += 'sc2_timeline_game_length_search.json';
-      break;
+  let endpoint = `https://api.us-east.tinybird.co/v0/pipes/${pipe}`;
 
-    case 'collection-rate':
-    endpoint += 'sc2_timeline_collection_rate_search.json';
-    break;
-
-    case 'army-value':
-      endpoint += 'sc2_timeline_army_value_search.json';
-      break;
-
-    case 'workers-active':
-      endpoint += 'sc2_timeline_workers_active_search.json';
-      break;
-
-    default:
-      return new Response(`search type ${searchType} not found`, {status: 400, headers: HEADERS});
+  if (quantiles) {
+    endpoint += '_quantiles';
   }
-  
+  endpoint += '.json';
+
   const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
