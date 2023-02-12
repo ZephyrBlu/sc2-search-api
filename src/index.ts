@@ -96,6 +96,9 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     case '/timeline/quantiles/workers-active':
       return await searchTimelines('sc2_timeline_workers_active', params, searchParams, env, true);
 
+    case '/build-players':
+      return await searchBuilds('sc2_player_from_build', params, searchParams, env);
+
     case '/recent':
       return await fetchRecent(params, env);
 
@@ -254,6 +257,39 @@ async function searchTimelines(
   }
   endpoint += '.json';
 
+  const url = `${endpoint}?${searchParams.toString()}`;
+  const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
+
+  if (!requestParams.has('refresh')) {
+    const cachedResult = await SEARCH_RESULTS_CACHE.get(url, {cacheTtl: CACHE_TTL});
+
+    if (cachedResult) {
+      return new Response(cachedResult, {headers: HEADERS});
+    }
+  }
+
+  const apiResponse = await fetch(authorizedUrl);
+  const searchResponse: TinybirdResponse = await apiResponse.json();
+  const searchResults = searchResponse.data;
+  const serializedSearchResults = JSON.stringify(searchResults);
+
+  if (apiResponse.ok) {
+    await SEARCH_RESULTS_CACHE.put(url, serializedSearchResults, {
+      expirationTtl: CACHE_TTL,
+    });
+  }
+
+  return new Response(serializedSearchResults, {headers: HEADERS, status: apiResponse.status});
+}
+
+async function searchBuilds(
+  pipe: string,
+  requestParams: URLSearchParams,
+  searchParams: URLSearchParams,
+  env: Env,
+) {
+  const {TINYBIRD_API_KEY, SEARCH_RESULTS_CACHE} = env;
+  const endpoint = 'https://api.us-east.tinybird.co/v0/pipes/sc2_player_from_build.json';
   const url = `${endpoint}?${searchParams.toString()}`;
   const authorizedUrl = `${url}&token=${TINYBIRD_API_KEY}`;
 
